@@ -1,7 +1,7 @@
 use axum::http::HeaderMap;
 use rand::Rng;
 use std::{
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard},
     time::{Duration, SystemTime},
 };
 use tiktoken_rs::cl100k_base;
@@ -62,53 +62,84 @@ impl ServerState {
             return String::new();
         }
 
-        let mut content = String::new();
-        while content.len() < length {
-            content.push_str(&lipsum::lipsum(10));
-            content.push(' ');
-        }
+        // Approximate number of words needed. Adjust the division factor as needed for better accuracy.
+        let word_count = length / 5;
+        let mut content = lipsum::lipsum(word_count);
         content.truncate(length);
         content
     }
 
-    pub fn count_tokens(&self, text: &str) -> u32 {
-        let bpe = cl100k_base().unwrap();
-        bpe.encode_with_special_tokens(text).len() as u32
+    pub fn count_tokens(&self, text: &str) -> anyhow::Result<u32> {
+        let bpe = cl100k_base()?;
+        Ok(bpe.encode_with_special_tokens(text).len() as u32)
+    }
+
+    fn reset_if_needed(
+        &self,
+        count: &mut MutexGuard<u32>,
+        reset_time: &mut MutexGuard<SystemTime>,
+        reset_duration: Duration,
+    ) {
+        let now = SystemTime::now();
+        if now >= **reset_time {
+            **count = 0;
+            **reset_time = now + reset_duration;
+        }
     }
 
     pub fn increment_request_count(&self) {
-        let now = SystemTime::now();
-        let mut count = self.request_count.lock().unwrap();
-        let mut reset_time = self.request_reset_time.lock().unwrap();
-
-        if now >= *reset_time {
-            *count = 0;
-            *reset_time = now + Duration::from_secs(self.args.x_ratelimit_reset_requests);
-        }
-
+        let mut count = self
+            .request_count
+            .lock()
+            .expect("Failed to lock request_count mutex");
+        let mut reset_time = self
+            .request_reset_time
+            .lock()
+            .expect("Failed to lock request_reset_time mutex");
+        self.reset_if_needed(
+            &mut count,
+            &mut reset_time,
+            Duration::from_secs(self.args.x_ratelimit_reset_requests),
+        );
         *count += 1;
     }
 
     pub fn add_token_usage(&self, tokens: u32) {
-        let now = SystemTime::now();
-        let mut count = self.token_count.lock().unwrap();
-        let mut reset_time = self.token_reset_time.lock().unwrap();
-
-        if now >= *reset_time {
-            *count = 0;
-            *reset_time = now + Duration::from_secs(self.args.x_ratelimit_reset_tokens * 60);
-        }
-
+        let mut count = self
+            .token_count
+            .lock()
+            .expect("Failed to lock token_count mutex");
+        let mut reset_time = self
+            .token_reset_time
+            .lock()
+            .expect("Failed to lock token_reset_time mutex");
+        self.reset_if_needed(
+            &mut count,
+            &mut reset_time,
+            Duration::from_secs(self.args.x_ratelimit_reset_tokens * 60),
+        );
         *count += tokens;
     }
 
     pub fn get_rate_limit_headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
 
-        let request_count = *self.request_count.lock().unwrap();
-        let token_count = *self.token_count.lock().unwrap();
-        let request_reset = *self.request_reset_time.lock().unwrap();
-        let token_reset = *self.token_reset_time.lock().unwrap();
+        let request_count = *self
+            .request_count
+            .lock()
+            .expect("Failed to lock request_count mutex");
+        let token_count = *self
+            .token_count
+            .lock()
+            .expect("Failed to lock token_count mutex");
+        let request_reset = *self
+            .request_reset_time
+            .lock()
+            .expect("Failed to lock request_reset_time mutex");
+        let token_reset = *self
+            .token_reset_time
+            .lock()
+            .expect("Failed to lock token_reset_time mutex");
 
         let now = SystemTime::now();
         let request_reset_seconds = request_reset
@@ -126,7 +157,7 @@ impl ServerState {
                 .x_ratelimit_limit_requests
                 .to_string()
                 .parse()
-                .unwrap(),
+                .expect("x-ratelimit-limit-requests must be a valid header value"),
         );
         headers.insert(
             "x-ratelimit-remaining-requests",
@@ -136,11 +167,13 @@ impl ServerState {
                 .saturating_sub(request_count))
             .to_string()
             .parse()
-            .unwrap(),
+            .expect("x-ratelimit-remaining-requests must be a valid header value"),
         );
         headers.insert(
             "x-ratelimit-reset-requests",
-            format!("{}s", request_reset_seconds).parse().unwrap(),
+            format!("{}s", request_reset_seconds)
+                .parse()
+                .expect("x-ratelimit-reset-requests must be a valid header value"),
         );
 
         headers.insert(
@@ -149,7 +182,7 @@ impl ServerState {
                 .x_ratelimit_limit_tokens
                 .to_string()
                 .parse()
-                .unwrap(),
+                .expect("x-ratelimit-limit-tokens must be a valid header value"),
         );
         headers.insert(
             "x-ratelimit-remaining-tokens",
@@ -159,11 +192,13 @@ impl ServerState {
                 .saturating_sub(token_count))
             .to_string()
             .parse()
-            .unwrap(),
+            .expect("x-ratelimit-remaining-tokens must be a valid header value"),
         );
         headers.insert(
             "x-ratelimit-reset-tokens",
-            format!("{}m0s", token_reset_seconds / 60).parse().unwrap(),
+            format!("{}m0s", token_reset_seconds / 60)
+                .parse()
+                .expect("x-ratelimit-reset-tokens must be a valid header value"),
         );
 
         headers

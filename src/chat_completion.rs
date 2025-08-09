@@ -1,3 +1,4 @@
+
 use axum::{
     extract::State,
     http::{HeaderMap, StatusCode},
@@ -56,17 +57,18 @@ pub async fn chat_completions(
 
     if let Some(error_code) = state.should_return_error() {
         let headers = state.get_rate_limit_headers();
-        return Err((
-            StatusCode::from_u16(error_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-            headers,
-            Json(json!({
-                "error": {
-                    "message": format!("Simulated error with code {}", error_code),
-                    "type": "api_error",
-                    "code": error_code.to_string()
-                }
-            })),
-        ));
+        let status_code = StatusCode::from_u16(error_code)
+            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+
+        let error_body = json!({
+            "error": {
+                "message": format!("Simulated error with code {}", error_code),
+                "type": "api_error",
+                "code": error_code.to_string()
+            }
+        });
+
+        return Err((status_code, headers, Json(error_body)));
     }
 
     let response_length = state.get_response_length();
@@ -84,8 +86,8 @@ pub async fn chat_completions(
         .map(|msgs| serde_json::to_string(msgs).unwrap_or_default())
         .unwrap_or_default();
 
-    let prompt_tokens = state.count_tokens(&prompt_text);
-    let completion_tokens = state.count_tokens(&content);
+    let prompt_tokens = state.count_tokens(&prompt_text).unwrap_or(0);
+    let completion_tokens = state.count_tokens(&content).unwrap_or(0);
     let total_tokens = prompt_tokens + completion_tokens;
 
     state.add_token_usage(total_tokens);
@@ -95,7 +97,7 @@ pub async fn chat_completions(
         object: "chat.completion".to_string(),
         created: SystemTime::now()
             .duration_since(UNIX_EPOCH)
-            .unwrap()
+            .expect("should be able to get duration")
             .as_secs(),
         model: payload.model.unwrap_or_else(|| "gpt-3.5-turbo".to_string()),
         choices: vec![Choice {
