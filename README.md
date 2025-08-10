@@ -61,7 +61,7 @@ Roy can simulate requests limits by setting the following headers in the respons
 | Header | Description |
 | ------ | ----------- |
 | x-ratelimit-limit-requests | The maximum number of requests that are permitted before exhausting the rate limit. |
-| x-ratelimit-remaining-requests The remaining number of requests that are permitted before exhausting the rate limit. |
+| x-ratelimit-remaining-requests | The remaining number of requests that are permitted before exhausting the rate limit. |
 | x-ratelimit-reset-requests | The time until the rate limit (based on requests) resets to its initial state. |
 
 To control how Roy populates those headers, start the server passing the value for the desired limits:
