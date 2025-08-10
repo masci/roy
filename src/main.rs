@@ -1,6 +1,9 @@
+// Copyright 2025 Massimiliano Pippi
+// SPDX-License-Identifier: MIT
+
 use clap::Parser;
-use roy::{run, Args};
 use log::LevelFilter;
+use roy::{run, Args};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

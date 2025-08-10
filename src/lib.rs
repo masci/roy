@@ -1,3 +1,6 @@
+// Copyright 2025 Massimiliano Pippi
+// SPDX-License-Identifier: MIT
+
 use axum::{routing::post, Router};
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;

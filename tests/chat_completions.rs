@@ -1,3 +1,6 @@
+// Copyright 2025 Massimiliano Pippi
+// SPDX-License-Identifier: MIT
+
 #[cfg(test)]
 mod tests {
     use axum::{

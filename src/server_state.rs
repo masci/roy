@@ -1,3 +1,6 @@
+// Copyright 2025 Massimiliano Pippi
+// SPDX-License-Identifier: MIT
+
 use axum::http::HeaderMap;
 use humantime;
 use rand::Rng;

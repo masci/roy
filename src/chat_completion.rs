@@ -1,3 +1,5 @@
+// Copyright 2025 Massimiliano Pippi
+// SPDX-License-Identifier: MIT
 
 use axum::{
     extract::State,
