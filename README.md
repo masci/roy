@@ -8,10 +8,9 @@ Roy is a HTTP server compatible with the OpenAI platform format that simulates e
 test your clients behaviour under weird circumstances. Once started, Roy will run the server on port 8000 and will
 return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
 
-Roy comes with a tokenizer, so that it can compute the number of tokens contained both in the request and in the
-response with a decent approximation. The number of tokens will be used to set the proper headers in the response and
-simulate real-world situation to test your clients. The number of requests are also tracked, so that Roy can set the
-appropriate limits in the response headers.
+## Installation
+
+Available as soon as I figure this out (first Rust project)
 
 ## Basic usage
 
@@ -19,9 +18,10 @@ To run the server, just invoke `roy` from the command line. In this case, there 
 respond according to its default configuration values.
 ```sh
 roy
+# [2025-08-10T14:29:42Z INFO  roy] Roy server running on http://127.0.0.1:8000
 ```
 
-## Control returned responses
+## Control text responses
 
 Roy will return responses containing fragments of "Lorem Ipsum". The length of the responses will determined the
 number of tokens consumed and can be controlled. The length of the response is measured in number of characters, not
@@ -40,7 +40,7 @@ For example:
 roy --response-length 10:100
 ```
 
-## Returning errors
+## Simulate errors
 
 To simulate an error, you can pass the HTTP error code and the desired frequency in percent for that error to happen.
 For example, to return a 429 error half of the times, you can invoke Roy like this:
@@ -49,10 +49,12 @@ For example, to return a 429 error half of the times, you can invoke Roy like th
 roy --error-code 429 --error-rate 50
 ```
 
-## Introducing rate limits
+## Control rate limits
 
-Roy can simulate actual rate limits by providing random responses while keeping track of the number of requests,
-number of tokens and reset timing.
+Roy comes with a tokenizer, so that it can compute the number of tokens contained both in the request and in the
+response with a decent approximation. The number of tokens will be used to set the proper headers in the response and
+simulate real-world situation to test your clients. The number of requests are also tracked, so that Roy can set the
+appropriate limits in the response headers.
 
 ### Requests rate limits
 
