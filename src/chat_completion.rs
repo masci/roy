@@ -53,12 +53,23 @@ pub async fn chat_completions(
     state: State<ServerState>,
     Json(payload): Json<ChatCompletionRequest>,
 ) -> Result<(HeaderMap, Json<Value>), (StatusCode, HeaderMap, Json<Value>)> {
+    if state.check_request_limit_exceeded() {
+        let headers = state.get_rate_limit_headers();
+        let error_body = json!({
+            "error": {
+                "message": "Too many requests",
+                "type": "rate_limit_error",
+                "code": "rate_limit_exceeded"
+            }
+        });
+        return Err((StatusCode::TOO_MANY_REQUESTS, headers, Json(error_body)));
+    }
     state.increment_request_count();
 
     if let Some(error_code) = state.should_return_error() {
         let headers = state.get_rate_limit_headers();
-        let status_code = StatusCode::from_u16(error_code)
-            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
+        let status_code =
+            StatusCode::from_u16(error_code).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR);
 
         let error_body = json!({
             "error": {
@@ -90,6 +101,17 @@ pub async fn chat_completions(
     let completion_tokens = state.count_tokens(&content).unwrap_or(0);
     let total_tokens = prompt_tokens + completion_tokens;
 
+    if state.check_token_limit_exceeded(total_tokens) {
+        let headers = state.get_rate_limit_headers();
+        let error_body = json!({
+            "error": {
+                "message": "You have exceeded your token quota.",
+                "type": "rate_limit_error",
+                "code": "rate_limit_exceeded"
+            }
+        });
+        return Err((StatusCode::TOO_MANY_REQUESTS, headers, Json(error_body)));
+    }
     state.add_token_usage(total_tokens);
 
     let response = ChatCompletionResponse {

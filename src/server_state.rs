@@ -66,6 +66,44 @@ impl ServerState {
         Ok(bpe.encode_with_special_tokens(text).len() as u32)
     }
 
+    pub fn check_request_limit_exceeded(&self) -> bool {
+        let mut timestamps = self.request_timestamps.lock().unwrap();
+        let now = SystemTime::now();
+        let sixty_seconds_ago = now - Duration::from_secs(60);
+
+        // Prune old timestamps
+        while let Some(front) = timestamps.front() {
+            if *front < sixty_seconds_ago {
+                timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        // Check limit
+        timestamps.len() as u32 >= self.args.rpm
+    }
+
+    pub fn check_token_limit_exceeded(&self, new_tokens: u32) -> bool {
+        let mut timestamps = self.token_usage_timestamps.lock().unwrap();
+        let now = SystemTime::now();
+        let sixty_seconds_ago = now - Duration::from_secs(60);
+
+        // Prune old entries
+        while let Some((t, _)) = timestamps.front() {
+            if *t < sixty_seconds_ago {
+                timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        let current_token_usage: u32 = timestamps.iter().map(|(_, tokens)| tokens).sum();
+
+        // Check limit
+        (current_token_usage + new_tokens) > self.args.tpm
+    }
+
     pub fn increment_request_count(&self) {
         let mut timestamps = self.request_timestamps.lock().unwrap();
         let now = SystemTime::now();
