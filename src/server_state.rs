@@ -2,7 +2,8 @@ use axum::http::HeaderMap;
 use humantime;
 use rand::Rng;
 use std::{
-    sync::{Arc, Mutex, MutexGuard},
+    collections::VecDeque,
+    sync::{Arc, Mutex},
     time::{Duration, SystemTime},
 };
 use tiktoken_rs::cl100k_base;
@@ -12,27 +13,16 @@ use crate::Args;
 #[derive(Clone)]
 pub struct ServerState {
     args: Args,
-    request_count: Arc<Mutex<u32>>,
-    token_count: Arc<Mutex<u32>>,
-    requests_per_minute: Arc<Mutex<u32>>,
-    tokens_per_minute: Arc<Mutex<u32>>,
-    request_reset_time: Arc<Mutex<SystemTime>>,
-    token_reset_time: Arc<Mutex<SystemTime>>,
+    request_timestamps: Arc<Mutex<VecDeque<SystemTime>>>,
+    token_usage_timestamps: Arc<Mutex<VecDeque<(SystemTime, u32)>>>,
 }
 
 impl ServerState {
     pub fn new(args: Args) -> Self {
-        let now = SystemTime::now();
-        let rpm = args.rpm;
-        let tpm = args.tpm;
         Self {
             args,
-            request_count: Arc::new(Mutex::new(0)),
-            token_count: Arc::new(Mutex::new(0)),
-            requests_per_minute: Arc::new(Mutex::new(rpm)),
-            tokens_per_minute: Arc::new(Mutex::new(tpm)),
-            request_reset_time: Arc::new(Mutex::new(now)),
-            token_reset_time: Arc::new(Mutex::new(now)),
+            request_timestamps: Arc::new(Mutex::new(VecDeque::new())),
+            token_usage_timestamps: Arc::new(Mutex::new(VecDeque::new())),
         }
     }
 
@@ -65,8 +55,6 @@ impl ServerState {
         if length == 0 {
             return String::new();
         }
-
-        // Approximate number of words needed. Adjust the division factor as needed for better accuracy.
         let word_count = length / 5;
         let mut content = lipsum::lipsum(word_count);
         content.truncate(length);
@@ -78,92 +66,117 @@ impl ServerState {
         Ok(bpe.encode_with_special_tokens(text).len() as u32)
     }
 
-    fn reset_if_needed(
-        &self,
-        count: &mut MutexGuard<u32>,
-        reset_time: &mut MutexGuard<SystemTime>,
-        reset_duration: Duration,
-    ) {
-        let now = SystemTime::now();
-        if now >= **reset_time {
-            **count = 0;
-            **reset_time = now + reset_duration;
-        }
-    }
-
     pub fn increment_request_count(&self) {
-        let mut count = self
-            .request_count
-            .lock()
-            .expect("Failed to lock request_count mutex");
-        *count += 1;
+        let mut timestamps = self.request_timestamps.lock().unwrap();
+        let now = SystemTime::now();
+        let sixty_seconds_ago = now - Duration::from_secs(60);
+        while let Some(front) = timestamps.front() {
+            if *front < sixty_seconds_ago {
+                timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+        timestamps.push_back(now);
     }
 
     pub fn add_token_usage(&self, tokens: u32) {
-        let mut count = self
-            .token_count
-            .lock()
-            .expect("Failed to lock token_count mutex");
-        *count += tokens;
+        let mut timestamps = self.token_usage_timestamps.lock().unwrap();
+        let now = SystemTime::now();
+        let sixty_seconds_ago = now - Duration::from_secs(60);
+        while let Some((t, _)) = timestamps.front() {
+            if *t < sixty_seconds_ago {
+                timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+        timestamps.push_back((now, tokens));
     }
 
     pub fn get_rate_limit_headers(&self) -> HeaderMap {
         let mut headers = HeaderMap::new();
-
-        let request_count = *self
-            .request_count
-            .lock()
-            .expect("Failed to lock request_count mutex");
-        let token_count = *self
-            .token_count
-            .lock()
-            .expect("Failed to lock token_count mutex");
-        let request_reset = *self
-            .request_reset_time
-            .lock()
-            .expect("Failed to lock request_reset_time mutex");
-        let token_reset = *self
-            .token_reset_time
-            .lock()
-            .expect("Failed to lock token_reset_time mutex");
-
         let now = SystemTime::now();
-        let request_reset_duration = request_reset.duration_since(now).unwrap_or(Duration::ZERO);
-        let token_reset_duration = token_reset.duration_since(now).unwrap_or(Duration::ZERO);
 
-        let request_reset_duration_rounded = Duration::from_secs(request_reset_duration.as_secs());
-        let token_reset_duration_rounded = Duration::from_secs(token_reset_duration.as_secs());
+        // Requests logic
+        let mut timestamps = self.request_timestamps.lock().unwrap();
+        let sixty_seconds_ago = now - Duration::from_secs(60);
 
-        headers.insert("x-ratelimit-limit-requests", "0".parse().unwrap());
+        while let Some(front) = timestamps.front() {
+            if *front < sixty_seconds_ago {
+                timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        let request_count = timestamps.len() as u32;
+        let limit = self.args.rpm;
+        let remaining = limit.saturating_sub(request_count);
+
+        let reset_duration = if request_count < limit {
+            Duration::ZERO
+        } else {
+            if let Some(oldest) = timestamps.front() {
+                (*oldest + Duration::from_secs(60))
+                    .duration_since(now)
+                    .unwrap_or(Duration::ZERO)
+            } else {
+                Duration::ZERO
+            }
+        };
+        let reset_duration_rounded = Duration::from_secs(reset_duration.as_secs());
+
+        headers.insert(
+            "x-ratelimit-limit-requests",
+            limit.to_string().parse().unwrap(),
+        );
         headers.insert(
             "x-ratelimit-remaining-requests",
-            (self.args.rpm.saturating_sub(request_count))
-                .to_string()
-                .parse()
-                .expect("x-ratelimit-remaining-requests must be a valid header value"),
+            remaining.to_string().parse().unwrap(),
         );
         headers.insert(
             "x-ratelimit-reset-requests",
-            humantime::format_duration(request_reset_duration_rounded)
+            humantime::format_duration(reset_duration_rounded)
                 .to_string()
                 .parse()
                 .expect("x-ratelimit-reset-requests must be a valid header value"),
         );
 
+        // Tokens logic
+        let mut token_timestamps = self.token_usage_timestamps.lock().unwrap();
+        while let Some((t, _)) = token_timestamps.front() {
+            if *t < sixty_seconds_ago {
+                token_timestamps.pop_front();
+            } else {
+                break;
+            }
+        }
+
+        let current_token_usage: u32 = token_timestamps.iter().map(|(_, tokens)| tokens).sum();
+        let token_limit = self.args.tpm;
+        let remaining_tokens = token_limit.saturating_sub(current_token_usage);
+
+        let token_reset_duration = if current_token_usage < token_limit {
+            Duration::ZERO
+        } else {
+            if let Some((oldest_ts, _)) = token_timestamps.front() {
+                (*oldest_ts + Duration::from_secs(60))
+                    .duration_since(now)
+                    .unwrap_or(Duration::ZERO)
+            } else {
+                Duration::ZERO
+            }
+        };
+        let token_reset_duration_rounded = Duration::from_secs(token_reset_duration.as_secs());
+
         headers.insert(
             "x-ratelimit-limit-tokens",
-            self.args
-                .tpm
-                .to_string()
-                .parse()
-                .expect("x-ratelimit-limit-tokens must be a valid header value"),
+            token_limit.to_string().parse().unwrap(),
         );
         headers.insert(
             "x-ratelimit-remaining-tokens",
-            (self.args.tpm.saturating_sub(token_count))
-                .to_string()
-                .parse()
-                .expect("x-ratelimit-remaining-tokens must be a valid header value"),
+            remaining_tokens.to_string().parse().unwrap(),
         );
         headers.insert(
             "x-ratelimit-reset-tokens",
