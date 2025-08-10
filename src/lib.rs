@@ -37,31 +37,17 @@ pub struct Args {
 
     #[arg(
         long,
-        help = "Maximum number of requests per reset period",
-        default_value = "60"
+        help = "Maximum number of requests per minute",
+        default_value = "500"
     )]
-    pub x_ratelimit_limit_requests: u32,
+    pub rpm: u32,
 
     #[arg(
         long,
-        help = "Request rate limit reset time in seconds",
-        default_value = "1"
+        help = "Maximum number of tokens per minute",
+        default_value = "30000"
     )]
-    pub x_ratelimit_reset_requests: u64,
-
-    #[arg(
-        long,
-        help = "Maximum number of tokens per reset period",
-        default_value = "150000"
-    )]
-    pub x_ratelimit_limit_tokens: u32,
-
-    #[arg(
-        long,
-        help = "Token rate limit reset time in minutes",
-        default_value = "6"
-    )]
-    pub x_ratelimit_reset_tokens: u64,
+    pub tpm: u32,
 }
 
 pub async fn run(args: Args) -> anyhow::Result<()> {

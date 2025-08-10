@@ -19,10 +19,8 @@ mod tests {
             response_length: Some("10".to_string()),
             error_code: None,
             error_rate: None,
-            x_ratelimit_limit_requests: 60,
-            x_ratelimit_reset_requests: 1,
-            x_ratelimit_limit_tokens: 150000,
-            x_ratelimit_reset_tokens: 6,
+            rpm: 60,
+            tpm: 150000,
         };
         let state = ServerState::new(args);
         let app = Router::new()

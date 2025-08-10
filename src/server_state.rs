@@ -1,4 +1,5 @@
 use axum::http::HeaderMap;
+use humantime;
 use rand::Rng;
 use std::{
     sync::{Arc, Mutex, MutexGuard},
@@ -13,6 +14,8 @@ pub struct ServerState {
     args: Args,
     request_count: Arc<Mutex<u32>>,
     token_count: Arc<Mutex<u32>>,
+    requests_per_minute: Arc<Mutex<u32>>,
+    tokens_per_minute: Arc<Mutex<u32>>,
     request_reset_time: Arc<Mutex<SystemTime>>,
     token_reset_time: Arc<Mutex<SystemTime>>,
 }
@@ -20,15 +23,16 @@ pub struct ServerState {
 impl ServerState {
     pub fn new(args: Args) -> Self {
         let now = SystemTime::now();
-        let request_reset = now + Duration::from_secs(args.x_ratelimit_reset_requests);
-        let token_reset = now + Duration::from_secs(args.x_ratelimit_reset_tokens * 60);
-
+        let rpm = args.rpm;
+        let tpm = args.tpm;
         Self {
             args,
             request_count: Arc::new(Mutex::new(0)),
             token_count: Arc::new(Mutex::new(0)),
-            request_reset_time: Arc::new(Mutex::new(request_reset)),
-            token_reset_time: Arc::new(Mutex::new(token_reset)),
+            requests_per_minute: Arc::new(Mutex::new(rpm)),
+            tokens_per_minute: Arc::new(Mutex::new(tpm)),
+            request_reset_time: Arc::new(Mutex::new(now)),
+            token_reset_time: Arc::new(Mutex::new(now)),
         }
     }
 
@@ -92,15 +96,6 @@ impl ServerState {
             .request_count
             .lock()
             .expect("Failed to lock request_count mutex");
-        let mut reset_time = self
-            .request_reset_time
-            .lock()
-            .expect("Failed to lock request_reset_time mutex");
-        self.reset_if_needed(
-            &mut count,
-            &mut reset_time,
-            Duration::from_secs(self.args.x_ratelimit_reset_requests),
-        );
         *count += 1;
     }
 
@@ -109,15 +104,6 @@ impl ServerState {
             .token_count
             .lock()
             .expect("Failed to lock token_count mutex");
-        let mut reset_time = self
-            .token_reset_time
-            .lock()
-            .expect("Failed to lock token_reset_time mutex");
-        self.reset_if_needed(
-            &mut count,
-            &mut reset_time,
-            Duration::from_secs(self.args.x_ratelimit_reset_tokens * 60),
-        );
         *count += tokens;
     }
 
@@ -142,36 +128,24 @@ impl ServerState {
             .expect("Failed to lock token_reset_time mutex");
 
         let now = SystemTime::now();
-        let request_reset_seconds = request_reset
-            .duration_since(now)
-            .unwrap_or(Duration::ZERO)
-            .as_secs();
-        let token_reset_seconds = token_reset
-            .duration_since(now)
-            .unwrap_or(Duration::ZERO)
-            .as_secs();
+        let request_reset_duration = request_reset.duration_since(now).unwrap_or(Duration::ZERO);
+        let token_reset_duration = token_reset.duration_since(now).unwrap_or(Duration::ZERO);
 
-        headers.insert(
-            "x-ratelimit-limit-requests",
-            self.args
-                .x_ratelimit_limit_requests
-                .to_string()
-                .parse()
-                .expect("x-ratelimit-limit-requests must be a valid header value"),
-        );
+        let request_reset_duration_rounded = Duration::from_secs(request_reset_duration.as_secs());
+        let token_reset_duration_rounded = Duration::from_secs(token_reset_duration.as_secs());
+
+        headers.insert("x-ratelimit-limit-requests", "0".parse().unwrap());
         headers.insert(
             "x-ratelimit-remaining-requests",
-            (self
-                .args
-                .x_ratelimit_limit_requests
-                .saturating_sub(request_count))
-            .to_string()
-            .parse()
-            .expect("x-ratelimit-remaining-requests must be a valid header value"),
+            (self.args.rpm.saturating_sub(request_count))
+                .to_string()
+                .parse()
+                .expect("x-ratelimit-remaining-requests must be a valid header value"),
         );
         headers.insert(
             "x-ratelimit-reset-requests",
-            format!("{}s", request_reset_seconds)
+            humantime::format_duration(request_reset_duration_rounded)
+                .to_string()
                 .parse()
                 .expect("x-ratelimit-reset-requests must be a valid header value"),
         );
@@ -179,24 +153,22 @@ impl ServerState {
         headers.insert(
             "x-ratelimit-limit-tokens",
             self.args
-                .x_ratelimit_limit_tokens
+                .tpm
                 .to_string()
                 .parse()
                 .expect("x-ratelimit-limit-tokens must be a valid header value"),
         );
         headers.insert(
             "x-ratelimit-remaining-tokens",
-            (self
-                .args
-                .x_ratelimit_limit_tokens
-                .saturating_sub(token_count))
-            .to_string()
-            .parse()
-            .expect("x-ratelimit-remaining-tokens must be a valid header value"),
+            (self.args.tpm.saturating_sub(token_count))
+                .to_string()
+                .parse()
+                .expect("x-ratelimit-remaining-tokens must be a valid header value"),
         );
         headers.insert(
             "x-ratelimit-reset-tokens",
-            format!("{}m0s", token_reset_seconds / 60)
+            humantime::format_duration(token_reset_duration_rounded)
+                .to_string()
                 .parse()
                 .expect("x-ratelimit-reset-tokens must be a valid header value"),
         );
