@@ -1,5 +1,9 @@
 # Roy - a token well spent
 
+<p align="center">
+<img width="700" height="140" alt="roy videogame" src="https://github.com/user-attachments/assets/81801b89-ba5e-4122-82b3-29743aa11147" />
+</p>
+
 Roy is a HTTP server compatible with the OpenAI platform format that simulates errors and rate limit data so you can
 test your clients behaviour under weird circumstances. Once started, Roy will run the server on port 8000 and will
 return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
