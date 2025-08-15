@@ -4,6 +4,7 @@
 use axum::{routing::post, Router};
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
+use colored::Colorize;
 use std::net::{IpAddr, SocketAddr};
 
 pub mod chat_completion;
@@ -66,7 +67,10 @@ pub async fn run(args: Args) -> anyhow::Result<()> {
     let addr = SocketAddr::new(args.address, args.port);
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
-    log::info!("Roy server running on http://{}", addr);
+    println!(
+        "Roy server running on {}",
+        format!("http://{}", addr).blue()
+    );
     axum::serve(listener, app).await?;
 
     Ok(())
