@@ -13,6 +13,7 @@ use server_state::ServerState;
 
 #[derive(Parser, Clone)]
 #[command(name = "roy")]
+#[command(version = env!("CARGO_PKG_VERSION"))]
 #[command(
     about = "A HTTP server compatible with the OpenAI platform format that simulates errors and rate limit data"
 )]
