@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: MIT
 
 use clap::Parser;
-use roy::{run, Args};
+use roy_cli::{run, Args};
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {

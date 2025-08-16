@@ -1,5 +1,5 @@
 [package]
-name = "roy"
+name = "roy-cli"
 version = "0.1.0"
 edition = "2021"
 license = "MIT"
@@ -35,3 +35,7 @@ hyper = { version = "0.14", features = ["full"] }
 [[test]]
 name = "chat_completions"
 path = "tests/chat_completions.rs"
+
+[[bin]]
+name = "roy"
+path = "src/main.rs"
