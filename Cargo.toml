@@ -2,6 +2,11 @@
 name = "roy"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+repository = "https://github.com/masci/roy"
+description = "Emulate the OpenAI API simulating rate limits and errors."
+readme = "README.md"
+exclude = [".github/*"]
 
 [dependencies]
 clap = { version = "4.0", features = ["derive"] }
