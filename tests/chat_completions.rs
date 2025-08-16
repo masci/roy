@@ -10,7 +10,7 @@ mod tests {
         Router,
     };
     use clap_verbosity_flag::Verbosity;
-    use roy::{chat_completion, server_state::ServerState, Args};
+    use roy_cli::{chat_completion, server_state::ServerState, Args};
     use tower::ServiceExt; // for `oneshot`
 
     #[tokio::test]
