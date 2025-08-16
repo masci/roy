@@ -87,6 +87,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           path: ./dist
+          merge-multiple: true # put all the artifact in the same folder at ./dist
 
       - name: List all downloaded files to verify
         run: |
