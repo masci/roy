@@ -91,8 +91,8 @@ jobs:
           echo "Listing all files in the downloaded artifacts directory:"
           ls -R ./dist
 
-      # - name: Create GitHub Release
-      #   uses: ncipollo/release-action@v1
-      #   with:
-      #     artifacts: "./dist/*"
-      #     generateReleaseNotes: true
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          artifacts: "./dist/*"
+          generateReleaseNotes: true
