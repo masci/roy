@@ -1,15 +1,17 @@
 // Copyright 2025 Massimiliano Pippi
 // SPDX-License-Identifier: MIT
 
-use axum::{routing::post, Router};
+use axum::{http::Uri, routing::post, Router};
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 use colored::Colorize;
 use std::net::{IpAddr, SocketAddr};
 
-pub mod chat_completion;
+pub mod chat_completions;
+pub mod models;
+pub mod responses;
 pub mod server_state;
-use server_state::ServerState;
+use crate::server_state::ServerState;
 
 #[derive(Parser, Clone)]
 #[command(name = "roy")]
@@ -55,14 +57,21 @@ pub struct Args {
     pub tpm: u32,
 }
 
+pub async fn not_found(uri: Uri) -> (axum::http::StatusCode, String) {
+    log::warn!("Path not found: {}", uri.path());
+    (axum::http::StatusCode::NOT_FOUND, "Not Found".to_string())
+}
+
 pub async fn run(args: Args) -> anyhow::Result<()> {
     let state = ServerState::new(args.clone());
 
     let app = Router::new()
         .route(
             "/v1/chat/completions",
-            post(chat_completion::chat_completions),
+            post(chat_completions::chat_completions),
         )
+        .route("/v1/responses", post(responses::responses))
+        .fallback(not_found)
         .with_state(state);
 
     let addr = SocketAddr::new(args.address, args.port);
