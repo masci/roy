@@ -10,7 +10,13 @@ return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
 
 ## Installation
 
-Available as soon as I figure this out (first Rust project)
+If you have Rust available, you can install Roy from [crates.io](https://crates.io/) with:
+```
+cargo install roy-cli
+```
+
+Alternatively, you can download one of the pre-compiled binaries from the
+[latest release](https://github.com/masci/roy/releases) on GitHub, choosing the right archive for your platform.
 
 ## Basic usage
 
@@ -18,7 +24,7 @@ To run the server, just invoke `roy` from the command line. In this case, there 
 respond according to its default configuration values.
 ```sh
 roy
-# [2025-08-10T14:29:42Z INFO  roy] Roy server running on http://127.0.0.1:8000
+# Roy server running on http://127.0.0.1:8000
 ```
 
 ## Control text responses
