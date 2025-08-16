@@ -31,7 +31,7 @@ jobs:
             target: x86_64-pc-windows-msvc
 
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
@@ -99,3 +99,12 @@ jobs:
         with:
           artifacts: "./dist/*"
           generateReleaseNotes: true
+
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Publish to crates.io
+        run: cargo publish --token ${{ secrets.CRATES_IO_API_TOKEN }}
