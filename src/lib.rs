@@ -1,7 +1,7 @@
 // Copyright 2025 Massimiliano Pippi
 // SPDX-License-Identifier: MIT
 
-use axum::{routing::post, Router};
+use axum::{http::Uri, routing::post, Router};
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 use colored::Colorize;
@@ -55,6 +55,11 @@ pub struct Args {
     pub tpm: u32,
 }
 
+pub async fn not_found(uri: Uri) -> (axum::http::StatusCode, String) {
+    log::warn!("Path not found: {}. Returning 404 Not Found", uri.path());
+    (axum::http::StatusCode::NOT_FOUND, "Not Found".to_string())
+}
+
 pub async fn run(args: Args) -> anyhow::Result<()> {
     let state = ServerState::new(args.clone());
 
@@ -63,6 +68,7 @@ pub async fn run(args: Args) -> anyhow::Result<()> {
             "/v1/chat/completions",
             post(chat_completion::chat_completions),
         )
+        .fallback(not_found)
         .with_state(state);
 
     let addr = SocketAddr::new(args.address, args.port);
