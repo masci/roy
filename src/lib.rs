@@ -13,6 +13,8 @@ use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 use colored::Colorize;
 use std::net::{IpAddr, SocketAddr};
+use std::time::Duration;
+use tower_http::timeout::TimeoutLayer;
 
 pub mod chat_completions;
 pub mod models;
@@ -68,6 +70,9 @@ pub struct Args {
         help = "Slowdown in milliseconds (fixed number or range like '10:100')"
     )]
     pub slowdown: Option<String>,
+
+    #[arg(long, help = "Timeout in milliseconds")]
+    pub timeout: Option<u64>,
 }
 
 pub async fn not_found(uri: Uri) -> (axum::http::StatusCode, String) {
@@ -89,7 +94,7 @@ pub async fn run(args: Args) -> anyhow::Result<()> {
         next.run(req).await
     }
 
-    let app = Router::new()
+    let mut app = Router::new()
         .route(
             "/v1/chat/completions",
             post(chat_completions::chat_completions),
@@ -98,6 +103,10 @@ pub async fn run(args: Args) -> anyhow::Result<()> {
         .route_layer(middleware::from_fn_with_state(state.clone(), slowdown))
         .fallback(not_found)
         .with_state(state);
+
+    if let Some(timeout) = args.timeout {
+        app = app.layer(TimeoutLayer::new(Duration::from_millis(timeout)));
+    }
 
     let addr = SocketAddr::new(args.address, args.port);
     let listener = tokio::net::TcpListener::bind(addr).await?;

@@ -25,6 +25,7 @@ mod tests {
             rpm: 60,
             tpm: 150000,
             slowdown: Some("0:100".to_string()),
+            timeout: None,
         };
         let state = ServerState::new(args);
         let app = Router::new()
