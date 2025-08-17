@@ -25,7 +25,7 @@ roy
 # Roy server running on http://127.0.0.1:8000
 ```
 
-## Control text responses
+## :memo: Control text responses
 
 Roy will return responses containing fragments of "Lorem Ipsum". The length of the responses will determined the
 number of tokens consumed and can be controlled. The length of the response is measured in number of characters, not
@@ -48,7 +48,7 @@ For example:
 roy --response-length 10:100
 ```
 
-## Simulate errors
+## :boom: Simulate errors
 
 ### HTTP Errors
 
@@ -83,7 +83,7 @@ Or you can introduce random slowness between a range of milliseconds:
 roy --slowdown 0:1000
 ```
 
-## Control rate limits
+## :control_knobs: Control rate limits
 
 Roy comes with a tokenizer, so that it can compute the number of tokens contained both in the request and in the
 response with a decent approximation. The number of tokens will be used to set the proper headers in the response and
@@ -122,7 +122,7 @@ To set the tokens per minute limit:
 roy --tpm 45000
 ```
 
-## Supported APIs
+## :card_index_dividers: Supported APIs
 
 - https://platform.openai.com/docs/api-reference/responses/create
 - https://platform.openai.com/docs/api-reference/chat/create
