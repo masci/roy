@@ -1,7 +1,14 @@
 // Copyright 2025 Massimiliano Pippi
 // SPDX-License-Identifier: MIT
 
-use axum::{http::Uri, routing::post, Router};
+use axum::{
+    extract::State,
+    http::{Request, Uri},
+    middleware::{self, Next},
+    response::Response,
+    routing::post,
+    Router,
+};
 use clap::Parser;
 use clap_verbosity_flag::Verbosity;
 use colored::Colorize;
@@ -55,6 +62,12 @@ pub struct Args {
         default_value = "30000"
     )]
     pub tpm: u32,
+
+    #[arg(
+        long,
+        help = "Slowdown in milliseconds (fixed number or range like '10:100')"
+    )]
+    pub slowdown: Option<String>,
 }
 
 pub async fn not_found(uri: Uri) -> (axum::http::StatusCode, String) {
@@ -65,12 +78,24 @@ pub async fn not_found(uri: Uri) -> (axum::http::StatusCode, String) {
 pub async fn run(args: Args) -> anyhow::Result<()> {
     let state = ServerState::new(args.clone());
 
+    async fn slowdown(
+        State(state): State<ServerState>,
+        req: Request<axum::body::Body>,
+        next: Next,
+    ) -> Response {
+        let slowdown = state.get_slodown_ms();
+        log::debug!("Slowing down request by {}ms", slowdown);
+        tokio::time::sleep(std::time::Duration::from_millis(slowdown)).await;
+        next.run(req).await
+    }
+
     let app = Router::new()
         .route(
             "/v1/chat/completions",
             post(chat_completions::chat_completions),
         )
         .route("/v1/responses", post(responses::responses))
+        .route_layer(middleware::from_fn_with_state(state.clone(), slowdown))
         .fallback(not_found)
         .with_state(state);
 
@@ -81,6 +106,7 @@ pub async fn run(args: Args) -> anyhow::Result<()> {
         "Roy server running on {}",
         format!("http://{}", addr).blue()
     );
+
     axum::serve(listener, app).await?;
 
     Ok(())
