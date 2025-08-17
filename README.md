@@ -93,3 +93,8 @@ To set the tokens per minute limit:
 ```sh
 roy --tpm 45000
 ```
+
+## Supported APIs
+
+- https://platform.openai.com/docs/api-reference/responses/create
+- https://platform.openai.com/docs/api-reference/chat/create
