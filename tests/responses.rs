@@ -10,11 +10,11 @@ mod tests {
         Router,
     };
     use clap_verbosity_flag::Verbosity;
-    use roy_cli::{chat_completions, server_state::ServerState, Args};
+    use roy_cli::{responses, server_state::ServerState, Args};
     use tower::ServiceExt; // for `oneshot`
 
     #[tokio::test]
-    async fn test_chat_completions() {
+    async fn test_responses() {
         let args = Args {
             verbosity: Verbosity::new(0, 0),
             port: 8000,
@@ -27,19 +27,16 @@ mod tests {
         };
         let state = ServerState::new(args);
         let app = Router::new()
-            .route(
-                "/v1/chat/completions",
-                post(chat_completions::chat_completions),
-            )
+            .route("/v1/responses", post(responses::responses))
             .with_state(state);
 
         let response = app
             .oneshot(Request::builder()
                 .method("POST")
-                .uri("/v1/chat/completions")
+                .uri("/v1/responses")
                 .header("Content-Type", "application/json")
                 .body(Body::from(
-                    r#"{"messages":[{"role":"user","content":"Hello"}],"model":"gpt-3.5-turbo"}"#,
+                    r#"{"model":"gpt-4.1","input":"Hello"}"#,
                 ))
                 .unwrap(),
             )

@@ -11,6 +11,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::models::Usage;
 use crate::server_state::ServerState;
 
 #[derive(Deserialize)]
@@ -42,13 +43,6 @@ pub struct Choice {
 pub struct Message {
     pub role: String,
     pub content: String,
-}
-
-#[derive(Serialize)]
-pub struct Usage {
-    pub prompt_tokens: u32,
-    pub completion_tokens: u32,
-    pub total_tokens: u32,
 }
 
 pub async fn chat_completions(
