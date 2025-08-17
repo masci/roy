@@ -24,6 +24,7 @@ mod tests {
             error_rate: None,
             rpm: 60,
             tpm: 150000,
+            slowdown: Some("0:100".to_string()),
         };
         let state = ServerState::new(args);
         let app = Router::new()
@@ -31,14 +32,13 @@ mod tests {
             .with_state(state);
 
         let response = app
-            .oneshot(Request::builder()
-                .method("POST")
-                .uri("/v1/responses")
-                .header("Content-Type", "application/json")
-                .body(Body::from(
-                    r#"{"model":"gpt-4.1","input":"Hello"}"#,
-                ))
-                .unwrap(),
+            .oneshot(
+                Request::builder()
+                    .method("POST")
+                    .uri("/v1/responses")
+                    .header("Content-Type", "application/json")
+                    .body(Body::from(r#"{"model":"gpt-4.1","input":"Hello"}"#))
+                    .unwrap(),
             )
             .await
             .unwrap();

@@ -54,6 +54,21 @@ impl ServerState {
         }
     }
 
+    pub fn get_slodown_ms(&self) -> u64 {
+        match &self.args.slowdown {
+            Some(slowdown_str) => {
+                if let Some(pos) = slowdown_str.find(':') {
+                    let min: u64 = slowdown_str[..pos].parse().unwrap_or(0);
+                    let max: u64 = slowdown_str[pos + 1..].parse().unwrap_or(600000); // 10 minutes
+                    rand::thread_rng().gen_range(min..=max)
+                } else {
+                    slowdown_str.parse().unwrap_or(0)
+                }
+            }
+            None => 0, // default is zero, no slowdown
+        }
+    }
+
     pub fn generate_lorem_content(&self, length: usize) -> String {
         if length == 0 {
             return String::new();

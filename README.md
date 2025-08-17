@@ -18,8 +18,6 @@ cargo install roy-cli
 Alternatively, you can download one of the pre-compiled binaries from the
 [latest release](https://github.com/masci/roy/releases) on GitHub, choosing the right archive for your platform.
 
-## Basic usage
-
 To run the server, just invoke `roy` from the command line. In this case, there will be no errors and Roy will
 respond according to its default configuration values.
 ```sh
@@ -33,11 +31,15 @@ Roy will return responses containing fragments of "Lorem Ipsum". The length of t
 number of tokens consumed and can be controlled. The length of the response is measured in number of characters, not
 tokens. If not specified, Roy returns a response of 250 characters.
 
+### Always return a certain amount of text
+
 To return a fixed-length response of 100 characters, invoke Roy like this:
 
 ```sh
 roy --response-length 100
 ```
+
+### Return a random amount of text within a certain size interval
 
 To have Roy return a response of random length N at each request, pass a range in the format `a:b` where a <= N <= b.
 For example:
@@ -48,11 +50,37 @@ roy --response-length 10:100
 
 ## Simulate errors
 
+### HTTP Errors
+
 To simulate an error, you can pass the HTTP error code and the desired frequency in percent for that error to happen.
 For example, to return a 429 error half of the times, you can invoke Roy like this:
 
 ```sh
 roy --error-code 429 --error-rate 50
+```
+
+### Timeout errors
+
+OpenAI has a default timeout for requests of 10 minutes. To easily simulate a timeout scenario without changing the
+client code, you can tell Roy to time out requests after a certain amount of time expressed in milliseconds:
+
+```sh
+roy --timeout 500
+```
+
+### Slow responses
+
+You can simulate slow responses by having Roy introduce a sleep before responding to the HTTP request. You can either
+pass a fixed amount of milliseconds that will be wasted for each and every request:
+
+```sh
+roy --slowdown 100
+```
+
+Or you can introduce random slowness between a range of milliseconds:
+
+```sh
+roy --slowdown 0:1000
 ```
 
 ## Control rate limits
@@ -78,7 +106,7 @@ To control how Roy populates those headers, start the server passing the value f
 roy --rpm 100
 ```
 
-## Tokens rate limits
+### Tokens rate limits
 
 Roy can simulate token limits by setting the following headers in the response:
 
