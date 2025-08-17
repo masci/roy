@@ -8,7 +8,7 @@ Roy is a HTTP server compatible with the OpenAI platform format that simulates e
 test your clients behaviour under weird circumstances. Once started, Roy will run the server on port 8000 and will
 return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
 
-## Installation
+## :floppy_disk: Installation
 
 If you have Rust available, you can install Roy from [crates.io](https://crates.io/) with:
 ```
