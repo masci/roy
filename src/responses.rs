@@ -18,6 +18,7 @@ pub struct ResponsesRequest {
     pub model: Option<String>,
     pub input: Option<String>,
     pub instructions: Option<String>,
+    pub stream: Option<bool>,
     #[serde(flatten)]
     pub _other: Value,
 }
