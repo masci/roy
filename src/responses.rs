@@ -48,6 +48,11 @@ pub struct ResponsesResponse {
     pub output: Vec<ResponsesOutput>,
 }
 
+#[derive(Serialize)]
+pub struct ResponsesStreamResponse {
+    pub id: String,
+}
+
 pub async fn responses(
     state: State<ServerState>,
     Json(payload): Json<ResponsesRequest>,
@@ -108,29 +113,38 @@ pub async fn responses(
     }
     state.add_token_usage(total_tokens);
 
-    let response = ResponsesResponse {
-        id: format!("resp_{}", rand::thread_rng().gen::<u32>()),
-        object: "response".to_string(),
-        created_at: SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("should be able to get duration")
-            .as_secs(),
-        model: payload.model.unwrap_or_else(|| "gpt-5".to_string()),
-        usage: Usage {
-            prompt_tokens,
-            completion_tokens,
-            total_tokens,
-        },
-        output: vec![ResponsesOutput {
-            _type: "message".to_string(),
-            id: format!("msg_{}", rand::thread_rng().gen::<u32>()),
-            content: vec![ResponsesOutputContent {
-                _type: "output_text".to_string(),
-                text: content,
-            }],
-        }],
-    };
-
     let headers = state.get_rate_limit_headers();
-    Ok((headers, Json(json!(response))))
+
+    let stream_response = payload.stream.unwrap_or(false);
+    if stream_response {
+        // FIXME
+        let response = ResponsesStreamResponse {
+            id: format!("resp_{}", rand::thread_rng().gen::<u32>()),
+        };
+        return Ok((headers, Json(json!(response))));
+    } else {
+        let response = ResponsesResponse {
+            id: format!("resp_{}", rand::thread_rng().gen::<u32>()),
+            object: "response".to_string(),
+            created_at: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("should be able to get duration")
+                .as_secs(),
+            model: payload.model.unwrap_or_else(|| "gpt-5".to_string()),
+            usage: Usage {
+                prompt_tokens,
+                completion_tokens,
+                total_tokens,
+            },
+            output: vec![ResponsesOutput {
+                _type: "message".to_string(),
+                id: format!("msg_{}", rand::thread_rng().gen::<u32>()),
+                content: vec![ResponsesOutputContent {
+                    _type: "output_text".to_string(),
+                    text: content,
+                }],
+            }],
+        };
+        return Ok((headers, Json(json!(response))));
+    }
 }
