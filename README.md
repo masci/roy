@@ -8,7 +8,7 @@ Roy is a HTTP server compatible with the OpenAI platform format that simulates e
 test your clients behaviour under weird circumstances. Once started, Roy will run the server on port 8000 and will
 return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
 
-## :floppy_disk: Installation
+## 💾 Installation
 
 If you have Rust available, you can install Roy from [crates.io](https://crates.io/) with:
 ```
@@ -25,7 +25,7 @@ roy
 # Roy server running on http://127.0.0.1:8000
 ```
 
-## :memo: Control text responses
+## 📝 Control text responses
 
 Roy will return responses containing fragments of "Lorem Ipsum". The length of the responses will determined the
 number of tokens consumed and can be controlled. The length of the response is measured in number of characters, not
@@ -48,7 +48,7 @@ For example:
 roy --response-length 10:100
 ```
 
-## :boom: Simulate errors
+## 💥 Simulate errors
 
 ### HTTP Errors
 
@@ -83,7 +83,7 @@ Or you can introduce random slowness between a range of milliseconds:
 roy --slowdown 0:1000
 ```
 
-## :control_knobs: Control rate limits
+## 🎛️ Control rate limits
 
 Roy comes with a tokenizer, so that it can compute the number of tokens contained both in the request and in the
 response with a decent approximation. The number of tokens will be used to set the proper headers in the response and
@@ -122,7 +122,9 @@ To set the tokens per minute limit:
 roy --tpm 45000
 ```
 
-## :card_index_dividers: Supported APIs
+## 🗂️ Supported APIs
 
 - https://platform.openai.com/docs/api-reference/responses/create
+- https://platform.openai.com/docs/api-reference/responses-streaming
 - https://platform.openai.com/docs/api-reference/chat/create
+- https://platform.openai.com/docs/api-reference/chat-streaming
