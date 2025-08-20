@@ -17,7 +17,6 @@ use std::time::Duration;
 use tower_http::timeout::TimeoutLayer;
 
 pub mod chat_completions;
-pub mod models;
 pub mod responses;
 pub mod server_state;
 use crate::server_state::ServerState;
