@@ -34,7 +34,7 @@ pub struct Args {
     #[arg(long, help = "Port to listen on", default_value = "8000")]
     pub port: u16,
 
-    #[arg(long, help = "Address to listen on", default_value = "127.0.0.1")]
+    #[arg(long, help = "Address to listen on", default_value = "0.0.0.0")]
     pub address: IpAddr,
 
     #[arg(
