@@ -79,6 +79,30 @@ pub async fn not_found(uri: Uri) -> (axum::http::StatusCode, String) {
     (axum::http::StatusCode::NOT_FOUND, "Not Found".to_string())
 }
 
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    let mut terminate_signal =
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler");
+
+    #[cfg(unix)]
+    let terminate = terminate_signal.recv();
+
+    #[cfg(not(unix))]
+    // On non-Unix platforms, we just make terminate a pending future, only ctrl_c matters.
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
+
+    println!();
+    log::info!("Signal received, starting graceful shutdown");
+}
+
 pub async fn run(args: Args) -> anyhow::Result<()> {
     let state = ServerState::new(args.clone());
 
@@ -115,7 +139,9 @@ pub async fn run(args: Args) -> anyhow::Result<()> {
         format!("http://{}", addr).blue()
     );
 
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     Ok(())
 }
