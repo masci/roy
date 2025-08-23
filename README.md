@@ -10,7 +10,7 @@ return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
 
 ## 💾 Installation
 
-If you have Rust available, you can install Roy from [crates.io](https://crates.io/) with:
+If you have Rust available, you can install Roy from [crates.io](https://crates.io/crates/roy-cli) with:
 ```
 cargo install roy-cli
 ```
