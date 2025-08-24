@@ -17,6 +17,7 @@ return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
 ![GitHub License](https://img.shields.io/github/license/masci/roy?color=blue)
 ![Crates.io Version](https://img.shields.io/crates/v/roy-cli)
 ![Crates.io Downloads (recent)](https://img.shields.io/crates/dr/roy-cli)
+![Docker Image Size (tag)](https://img.shields.io/docker/image-size/masci/roy/main)
 
 </div>
 
