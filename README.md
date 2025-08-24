@@ -8,6 +8,19 @@ Roy is a HTTP server compatible with the OpenAI platform format that simulates e
 test your clients behaviour under weird circumstances. Once started, Roy will run the server on port 8000 and will
 return responses using [Lorem Ipsum](https://www.lipsum.com/) dummy text.
 
+<div align="center">
+
+[![Test](https://github.com/masci/roy/actions/workflows/test.yml/badge.svg)](https://github.com/masci/roy/actions/workflows/test.yml)
+[![Release](https://github.com/masci/roy/actions/workflows/release.yml/badge.svg)](https://github.com/masci/roy/actions/workflows/release.yml)
+[![Docker Publish](https://github.com/masci/roy/actions/workflows/docker-publish.yml/badge.svg)](https://github.com/masci/roy/actions/workflows/docker-publish.yml)
+
+![GitHub License](https://img.shields.io/github/license/masci/roy?color=blue)
+![Crates.io Version](https://img.shields.io/crates/v/roy-cli)
+![Crates.io Downloads (recent)](https://img.shields.io/crates/dr/roy-cli)
+
+</div>
+
+
 ## 💾 Installation
 
 If you have Rust available, you can install Roy from [crates.io](https://crates.io/crates/roy-cli) with:
